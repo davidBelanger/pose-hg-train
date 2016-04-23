@@ -44,6 +44,14 @@ function step(tag)
 
         -- Do a forward pass and calculate loss
         output = model:forward(input)
+
+        if(type(label) == "table" and torch.isTensor(output))then
+            label = label[#label]
+            label = {label}
+            output = {output}
+        end
+
+
         err = criterion:forward(output, label)
 
         -- Training: Do backpropagation and optimization

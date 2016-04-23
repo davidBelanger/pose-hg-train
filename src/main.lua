@@ -1,5 +1,10 @@
 require 'paths'
+
+package.path = package.path .. ';../../torch-util/?.lua'
+package.path = package.path .. ';../../NLPConv/rnn/?.lua'
+
 paths.dofile('../../spen/SPENPoseInterface.lua')
+
 spenInterface = SPENPoseInterface()
 
 

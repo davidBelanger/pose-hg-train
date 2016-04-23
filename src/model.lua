@@ -16,7 +16,7 @@ elseif opt.loadModel ~= 'none' then
     model = torch.load(opt.loadModel)
 
     if(opt.createSPEN) then
-        model = spenInterface:createSPENModel(model)
+        model = spenInterface:createSPENModel(model,opt)
     end
 
 -- Or we're starting fresh
