@@ -1,4 +1,8 @@
 require 'paths'
+paths.dofile('../../spen/SPENPoseInterface.lua')
+spenInterface = SPENPoseInterface()
+
+
 paths.dofile('ref.lua')     -- Parse command line input and do global variable initialization
 paths.dofile('data.lua')    -- Set up data processing
 paths.dofile('model.lua')   -- Read in network model
