@@ -15,6 +15,11 @@ else predHMs = torch.Tensor(ref.valid.nsamples, unpack(outputDim)) end
 -- Model parameters
 param, gradparam = model:getParameters()
 
+if(opt.singleOutput) then
+    criterion = nn.MSECriterion()
+    criterion:cuda()
+end
+
 -- Main processing step
 function step(tag)
     local avgLoss, avgAcc = 0.0, 0.0
@@ -42,15 +47,12 @@ function step(tag)
         if tag == 'predict' or (tag == 'valid' and trackBest) then idx = i end
         local input, label = loadData(set, idx, r.batchsize)
 
+
         -- Do a forward pass and calculate loss
         output = model:forward(input)
-
-        if(type(label) == "table" and torch.isTensor(output))then
+        if(opt.singleOutput)then
             label = label[#label]
-            label = {label}
-            output = {output}
         end
-
 
         err = criterion:forward(output, label)
 
@@ -86,6 +88,10 @@ function step(tag)
             if postprocess then preds:sub(idx,idx+r.batchsize-1):copy(postprocess(set,idx,output)) end
         end
 
+        if(opt.singleOutput) then
+            output = {output}
+            label = {label}
+        end
         -- Calculate accuracy
         local acc = accuracy(output, label)
         avgLoss = avgLoss + err
