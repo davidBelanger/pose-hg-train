@@ -88,8 +88,13 @@ end
 optfn = optim[opt.optMethod]
 
 -- Random number seed
-if opt.manualSeed ~= -1 then torch.manualSeed(opt.manualSeed)
-else torch.seed() end                           
+if opt.manualSeed ~= -1 then 
+    torch.manualSeed(opt.manualSeed)
+    if(opt.GPU ~= -1) then cutorch.manualSeed(opt.manualSeed) end
+else 
+    torch.seed() 
+    if(opt.GPU ~= -1) then  cutorch.seed() end
+end                           
 
 -- Save options to experiment directory
 torch.save(opt.save .. '/options.t7', opt)

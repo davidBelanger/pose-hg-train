@@ -34,12 +34,12 @@ function step(tag)
         set = 'valid'
         isTesting = true
     end
-
+    local currAvg
     for i=1,r.iters do
         collectgarbage()
 
         local output,err,idx
-        xlua.progress(i, r.iters)
+       -- xlua.progress(i, r.iters)
 
         -- Load in data
         if tag == 'predict' or (tag == 'valid' and trackBest) then idx = i end
@@ -94,8 +94,9 @@ function step(tag)
         local acc = accuracy(output, label)
         avgLoss = avgLoss + err
         avgAcc = avgAcc + acc
-        local currAvg = avgLoss/i
-        if(i % 1 == 0)then  xlua.print(currAvg) end
+        local gamma = 0.85
+        currAvg = (i == 1) and err or (gamma*currAvg + (1 - gamma)*err)
+        if(i % 5 == 0) then print('loss-'..i..': '..currAvg) end
     end
 
     avgLoss = avgLoss / r.iters
