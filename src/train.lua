@@ -94,6 +94,8 @@ function step(tag)
         local acc = accuracy(output, label)
         avgLoss = avgLoss + err
         avgAcc = avgAcc + acc
+        local currAvg = avgLoss/i
+        if(i % 1 == 0)then  xlua.print(currAvg) end
     end
 
     avgLoss = avgLoss / r.iters

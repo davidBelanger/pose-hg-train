@@ -32,12 +32,17 @@ if not criterion then
     criterion = nn[opt.crit .. 'Criterion']()
 end
 
+if(opt.scale256) then
+    model = nn.Sequential():add(nn.MulConstant(255)):add(model)
+end
+
 if opt.GPU ~= -1 then
     -- Convert model to CUDA
     print('==> Converting model to CUDA')
     model:cuda()
     criterion:cuda()
 end
+
 
 
 if(not Util:isArray(modules_to_update)) then

@@ -32,7 +32,7 @@ function M.parse(arg)
     cmd:option('-momentum',         0.95, 'Momentum')
     cmd:option('-weightDecay',      1e-5, 'Weight decay')
     cmd:option('-crit',            'MSE', 'Criterion type')
-    cmd:option('-optMethod',   'rmsprop', 'Optimization method: rmsprop | sgd | nag | adadelta')
+    cmd:option('-optMethod',   'rmsprop', 'Optimization method: rmsprop | sgd | nag | adadelta | adam')
     cmd:option('-threshold',        .001, 'Threshold (on validation accuracy growth) to cut off training early')
     cmd:text()
     cmd:text(' ---------- Training options -----------------------------------')
@@ -49,6 +49,9 @@ function M.parse(arg)
     cmd:option('-outputRes',          64, 'Output heatmap resolution')
     cmd:option('-trainFile',          '', 'Name of training data file')
     cmd:option('-validFile',          '', 'Name of validation file')
+
+    cmd:option('-scale256',          false, 'whether to multiply inputs by 255')
+
 
     cmd:option('-useSPEN',          true, 'whether to use a SPEN')
     spenInterface:addOpts(cmd)
