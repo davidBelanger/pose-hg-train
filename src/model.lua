@@ -8,7 +8,7 @@ if opt.continue or opt.branch ~= 'none' then
     local prevModel = opt.load .. '/final_model.t7'
     print('==> Loading model from: ' .. prevModel)
     model = torch.load(prevModel)
-
+    modules_to_update = model
 -- Or a path to previously trained model is provided
 elseif opt.loadModel ~= 'none' then
     assert(paths.filep(opt.loadModel), 'File not found: ' .. opt.loadModel)
@@ -16,13 +16,14 @@ elseif opt.loadModel ~= 'none' then
     model = torch.load(opt.loadModel)
 
     if(opt.createSPEN) then
-        model = spenInterface:createSPENModel(model,opt)
+        model, modules_to_update = spenInterface:createSPENModel(model,opt)
     end
 
 -- Or we're starting fresh
 else
     print('==> Creating model from file: models/' .. opt.netType .. '.lua')
     model = createModel(modelArgs)
+    modules_to_update = model
     assert(not opt.createRNN,'are you sure you want to be training the HG model from scratch')
 end
 
@@ -37,3 +38,15 @@ if opt.GPU ~= -1 then
     model:cuda()
     criterion:cuda()
 end
+
+
+if(not Util:isArray(modules_to_update)) then
+    param, gradparam = modules_to_update:getParameters() 
+else
+    local cont = nn.Container()
+    for _, m in pairs(modules_to_update) do
+        cont:add(m)
+    end
+    param, gradparam = cont:getParameters()
+end
+

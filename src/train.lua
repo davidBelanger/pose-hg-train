@@ -12,8 +12,6 @@ preds = torch.Tensor(ref.valid.nsamples, unpack(predDim))
 if type(outputDim[1]) == "table" then predHMs = torch.Tensor(ref.valid.nsamples, unpack(outputDim[#outputDim]))
 else predHMs = torch.Tensor(ref.valid.nsamples, unpack(outputDim)) end
 
--- Model parameters
-param, gradparam = model:getParameters()
 
 if(opt.singleOutput) then
     criterion = nn.MSECriterion()

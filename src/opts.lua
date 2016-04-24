@@ -50,8 +50,9 @@ function M.parse(arg)
     cmd:option('-trainFile',          '', 'Name of training data file')
     cmd:option('-validFile',          '', 'Name of validation file')
 
+    cmd:option('-useSPEN',          true, 'whether to use a SPEN')
     spenInterface:addOpts(cmd)
-    
+
     local opt = cmd:parse(arg or {})
     opt.expDir = paths.concat(opt.expDir, opt.dataset)
     opt.dataDir = paths.concat(opt.dataDir, opt.dataset)
