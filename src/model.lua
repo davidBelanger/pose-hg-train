@@ -55,3 +55,4 @@ else
     param, gradparam = cont:getParameters()
 end
 
+print('optimizing '..param:nElement()..' params')

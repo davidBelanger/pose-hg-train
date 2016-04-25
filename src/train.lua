@@ -48,6 +48,7 @@ function step(tag)
 
         -- Do a forward pass and calculate loss
         output = model:forward(input)
+
         if(opt.singleOutput)then
             label = label[#label]
         end
@@ -94,7 +95,7 @@ function step(tag)
         local acc = accuracy(output, label)
         avgLoss = avgLoss + err
         avgAcc = avgAcc + acc
-        local gamma = 0.85
+        local gamma = 0.95
         currAvg = (i == 1) and err or (gamma*currAvg + (1 - gamma)*err)
         if(i % 5 == 0) then print('loss-'..i..': '..currAvg) end
     end
@@ -124,7 +125,9 @@ function step(tag)
     if tag == 'train' and opt.snapshot ~= 0 and epoch % opt.snapshot == 0 then
         -- Take an intermediate training snapshot
         model:clearState()
-        torch.save(paths.concat(opt.save, 'model_' .. epoch .. '.t7'), model)
+        local modelPath = paths.concat(opt.save, 'model_' .. epoch .. '.t7')
+        print('saving to '..modelPath)
+        torch.save(modelPath, model)
         torch.save(paths.concat(opt.save, 'optimState.t7'), optimState)
     elseif tag == 'valid' and trackBest and avgAcc > opt.bestAcc then
         -- A new record validation accuracy has been hit, save the model and predictions
