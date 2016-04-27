@@ -49,10 +49,9 @@ function step(tag)
         -- Do a forward pass and calculate loss
         output = model:forward(input)
 
-        if(opt.singleOutput)then
+        if(opt.singleOutput and (type(label) == "table")) then
             label = label[#label]
         end
-
         err = criterion:forward(output, label)
 
         -- Training: Do backpropagation and optimization
@@ -77,8 +76,13 @@ function step(tag)
         if opt.GPU ~= -1 then cutorch.synchronize() end
 
         -- If we're generating predictions, save output
+        if(opt.singleOutput) then
+            output = {output}
+            label = {label}
+        end
+
         if tag == 'predict' or (tag == 'valid' and trackBest) then
-            if type(outputDim[1]) == "table" then
+            if type(outputDim[1]) == "table"   then
                 -- If we're getting a table of heatmaps, save the last one
                 predHMs:sub(idx,idx+r.batchsize-1):copy(output[#output])
             else
@@ -87,17 +91,13 @@ function step(tag)
             if postprocess then preds:sub(idx,idx+r.batchsize-1):copy(postprocess(set,idx,output)) end
         end
 
-        if(opt.singleOutput) then
-            output = {output}
-            label = {label}
-        end
         -- Calculate accuracy
         local acc = accuracy(output, label)
         avgLoss = avgLoss + err
         avgAcc = avgAcc + acc
-        local gamma = 0.95
+        local gamma = 0.98
         currAvg = (i == 1) and err or (gamma*currAvg + (1 - gamma)*err)
-        if(i % 5 == 0) then print('loss-'..i..': '..currAvg) end
+        if(i % 1 == 0) then print('loss-'..i..': '..currAvg.." "..err) end
     end
 
     avgLoss = avgLoss / r.iters
