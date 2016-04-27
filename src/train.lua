@@ -97,7 +97,7 @@ function step(tag)
         avgAcc = avgAcc + acc
         local gamma = 0.98
         currAvg = (i == 1) and err or (gamma*currAvg + (1 - gamma)*err)
-        if(i % 1 == 0) then print('loss-'..i..': '..currAvg.." "..err) end
+        if(i % 5 == 0) then print('loss-'..i..': '..currAvg.." "..err) end
     end
 
     avgLoss = avgLoss / r.iters

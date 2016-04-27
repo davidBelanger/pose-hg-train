@@ -18,7 +18,7 @@ isFinished = false -- Finish early if validation accuracy plateaus, can be adjus
 -- Main training loop
 for i=1,opt.nEpochs do
     train()
-    valid()
+    predict()
     collectgarbage()
     epoch = epoch + 1
     if isFinished then break end

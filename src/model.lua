@@ -2,6 +2,7 @@
 paths.dofile('models/' .. opt.netType .. '.lua')
 
 if(opt.createSPEN) then assert(opt.loadModel) end
+local function prebatch() end
 
 -- Continuing an experiment where it left off
 if opt.continue or opt.branch ~= 'none' then
@@ -18,6 +19,8 @@ elseif opt.loadModel ~= 'none' then
     if(opt.createSPEN) then
         model, modules_to_update = spenInterface:createSPENModel(model,opt)
     end
+
+    prebatch = function() spenInterface:prebatch() end
 
 -- Or we're starting fresh
 else
