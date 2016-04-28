@@ -112,7 +112,7 @@ function step(tag)
         if tag == 'predict' or (tag == 'valid' and trackBest) then
             local oo = type(outputDim[1]) == "table" and output[#output] or output
             predHMs:narrow(1,numProcessed+1,oo:size(1)):copy(oo)
-            if postprocess then preds:sub(numProcessed+1,numProcessed + oo:size(1)):copy(postprocess(set,idx,{output})) end
+            if postprocess then preds:sub(numProcessed+1,numProcessed + oo:size(1)):copy(postprocess(set,idx,{oo})) end
         end
 
         -- Calculate accuracy
