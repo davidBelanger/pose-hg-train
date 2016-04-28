@@ -24,7 +24,7 @@ batchers = {}
 paths.dofile('batcher.lua')
 
 batchers['train'] = opt.dataCache ~= "" and Batcher(opt.dataCache,opt.trainBatch)
-batchers['valid'] = opt.validDataCache ~= "" and Batcher(opt.validDataCache,opt.trainBatch)
+batchers['predict'] = opt.validDataCache ~= "" and Batcher(opt.validDataCache,opt.validBatch)
 
 
 -- Main processing step
@@ -61,9 +61,11 @@ function step(tag)
         if tag == 'predict' or (tag == 'valid' and trackBest) then idx = i end
 
         local input, label
+        ---todo: for debugging
+
+
         if(batcher) then
             input, label, endfile = batcher:getData()
-            numProcessed = numProcessed + input:size(1)
             if(endfile and (tag == "predict" or tag == "valid")) then break end
         else
             input, label = loadData(set, idx, r.batchsize)
@@ -108,16 +110,14 @@ function step(tag)
         end
 
         if tag == 'predict' or (tag == 'valid' and trackBest) then
-            if type(outputDim[1]) == "table"   then
-                -- If we're getting a table of heatmaps, save the last one
-                predHMs:sub(idx,idx+r.batchsize-1):copy(output[#output])
-            else
-                predHMs:sub(idx,idx+r.batchsize-1):copy(output)
-            end
-            if postprocess then preds:sub(idx,idx+r.batchsize-1):copy(postprocess(set,idx,output)) end
+            local oo = type(outputDim[1]) == "table" and output[#output] or output
+            predHMs:narrow(1,numProcessed+1,oo:size(1)):copy(oo)
+            if postprocess then preds:sub(numProcessed+1,numProcessed + oo:size(1)):copy(postprocess(set,idx,{output})) end
         end
 
         -- Calculate accuracy
+        numProcessed = numProcessed + input:size(1)
+
         local acc = accuracy(output, label)
         avgLoss = avgLoss + err
         avgAcc = avgAcc + acc

@@ -14,7 +14,9 @@ end
 function Batcher:getData()
     self.loadedData = self.loadedData or torch.load(self.dataFiles[self.dataFileIndex])
 
+    local endfile = false
     if(self.dataIndex > self.loadedData[1]:size(1)) then 
+        endfile = true
         assert(self.numProcessedFromFile == self.loadedData[1]:size(1))
         self.loadedData = nil 
         self.dataFileIndex = dataFileIndex + 1
@@ -36,7 +38,7 @@ function Batcher:getData()
     self.numProcessedFromFile = self.numProcessedFromFile + len
 
     self.dataIndex = self.dataIndex + self.mb
-    return self.cudaInput, self.cudaLabel
+    return self.cudaInput, self.cudaLabel, endfile
 
 end
 
