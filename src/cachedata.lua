@@ -56,7 +56,7 @@ function step(tag)
             labels:narrow(1,j+1,si[1]):copy(label[2])
             j = j+si[1]
         end
-        local ofile = opt.save.."data-"..i..".t7"
+        local ofile = opt.save.."/"..tag.."-data-"..i..".t7"
         print(ofile)
         torch.save(ofile,{inputs,labels})
     end

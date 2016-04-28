@@ -12,7 +12,6 @@ paths.dofile('ref.lua')     -- Parse command line input and do global variable i
 paths.dofile('data.lua')    -- Set up data processing
 paths.dofile('model.lua')   -- Read in network model
 paths.dofile('train.lua')   -- Load up training/testing functions
-
 isFinished = false -- Finish early if validation accuracy plateaus, can be adjusted with opt.threshold
 
 -- Main training loop

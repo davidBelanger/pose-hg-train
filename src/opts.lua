@@ -53,7 +53,7 @@ function M.parse(arg)
     cmd:option('-scale256',          false, 'whether to multiply inputs by 255')
 
 
-    cmd:option('-useSPEN',          true, 'whether to use a SPEN')
+    cmd:option('-useSPEN',          false, 'whether to use a SPEN')
     spenInterface:addOpts(cmd)
 
     local opt = cmd:parse(arg or {})

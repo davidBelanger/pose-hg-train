@@ -18,13 +18,15 @@ if(opt.singleOutput) then
     criterion:cuda()
 end
 
-function readList(file)
-    local tab = {}
-    for l in io.lines(file) do
-        table.insert(tab,l)
-    end
-    return tab
-end
+
+batchers = {}
+
+paths.dofile('batcher.lua')
+
+batchers['train'] = opt.dataCache ~= "" and Batcher(opt.dataCache,opt.trainBatch)
+batchers['valid'] = opt.validDataCache ~= "" and Batcher(opt.validDataCache,opt.trainBatch)
+
+
 -- Main processing step
 function step(tag)
     local avgLoss, avgAcc = 0.0, 0.0
@@ -42,17 +44,11 @@ function step(tag)
         isTesting = true
     end
     local currAvg
-    local loadedData
-    local dataFileIndex = 1
-    local dataIndex = 1
-    local mb = r.batchsize
-    local useDataCache = (opt.dataCache ~= "" and (tag == "train")) or (opt.validDataCache ~= "" and (tag == "valid"))
-    local fileList = tag == "train" and opt.dataCache or opt.validDataCache
-    local dataFiles = useDataCache and readList(fileList) or nil
-    local numProcessedFromFile = 0
 
-    local cudaInput
-    local cudaLabel
+
+    local batcher = batchers[tag]
+
+    --xlua.progress(0, r.iters)
 
     for i=1,r.iters do
         collectgarbage()
@@ -62,43 +58,23 @@ function step(tag)
 
         -- Load in data
         if tag == 'predict' or (tag == 'valid' and trackBest) then idx = i end
+
         local input, label
-        if(useDataCache) then
-            loadedData = loadedData or torch.load(dataFiles[1])
-
-            if(dataIndex > loadedData[1]:size(1)) then 
-                assert(numProcessedFromFile == loadedData[1]:size(1))
-                loadedData = nil 
-                dataFileIndex = dataFileIndex + 1
-                local dataFile = dataFiles[dataFileIndex]
-                if(not dataFile) then break end
-                loadedData = torch.load(dataFile)
-                numProcessedFromFile = 0
-                dataIndex = 1
-            end
-
-            local len = (dataIndex + mb < loadedData[1]:size(1)) and mb or (loadedData[1]:size(1) - dataIndex+1)
-            local iptr = loadedData[1]:narrow(1,dataIndex,len)
-            local lptr = loadedData[2]:narrow(1,dataIndex,len)
-            cudaInput = cudaInput or iptr:cuda()
-            cudaLabel = cudaLabel or lptr:cuda()
-            cudaInput:resize(iptr:size()):copy(iptr)
-            cudaLabel:resize(lptr:size()):copy(lptr)
-            input = cudaInput
-            label = cudaLabel
-            numProcessedFromFile = numProcessedFromFile + len
-
-            dataIndex = dataIndex + mb
-
+        if(batcher) then
+            input, label = batcher:getData()
+            
         else
             input, label = loadData(set, idx, r.batchsize)
         end
 
         -- Do a forward pass and calculate loss
+        prebatch()
         output = model:forward(input)
-
         if(opt.singleOutput and (type(label) == "table")) then
             label = label[#label]
+        end
+        if((type(output) == "table")) then
+            output = output[#output]
         end
         err = criterion:forward(output, label)
 
