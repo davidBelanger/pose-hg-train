@@ -49,7 +49,8 @@ function step(tag)
     local batcher = batchers[tag]
 
     --xlua.progress(0, r.iters)
-
+    local numProcessed = 0
+    local blockCount = 0
     for i=1,r.iters do
         collectgarbage()
 
@@ -61,12 +62,13 @@ function step(tag)
 
         local input, label
         if(batcher) then
-            input, label = batcher:getData()
-            
+            input, label, endfile = batcher:getData()
+            numProcessed = numProcessed + input:size(1)
+            if(endfile and (tag == "predict" or tag == "valid")) then break end
         else
             input, label = loadData(set, idx, r.batchsize)
         end
-
+        blockCount = blockCount + 1
         -- Do a forward pass and calculate loss
         prebatch()
         output = model:forward(input)
@@ -125,8 +127,9 @@ function step(tag)
         --xlua.progress(i,r.iters)
     end
 
-    avgLoss = avgLoss / r.iters
-    avgAcc = avgAcc / r.iters
+    if(tag == "predict" or tag == "valid") then assert(numProcessed == r.iters) end
+    avgLoss = avgLoss / blockCount
+    avgAcc = avgAcc / blockCount
 
     local epochStep = torch.floor(ref.train.nsamples / (r.iters * r.batchsize * 2))
     if tag == 'train' and epoch % epochStep == 0 then
