@@ -13,7 +13,7 @@ if type(outputDim[1]) == "table" then predHMs = torch.Tensor(ref.valid.nsamples,
 else predHMs = torch.Tensor(ref.valid.nsamples, unpack(outputDim)) end
 
 
-if(opt.singleOutput) then
+if(opt.useSPEN) then
     criterion = nn.MSECriterion()
     criterion:cuda()
 end
@@ -74,18 +74,20 @@ function step(tag)
         -- Do a forward pass and calculate loss
         prebatch()
         output = model:forward(input)
-        if(opt.singleOutput and (type(label) == "table")) then
+        if(opt.useSPEN and (type(label) == "table")) then
             label = label[#label]
         end
-        if((type(output) == "table")) then
+        if(opt.useSPEN and (type(output) == "table")) then
             output = output[#output]
         end
+
         err = criterion:forward(output, label)
 
         -- Training: Do backpropagation and optimization
         if tag == 'train' then
             model:zeroGradParameters()
-            model:backward(input, criterion:backward(output, label))
+            local dfdo = criterion:backward(output, label)
+            model:backward(input, dfdo)
             local function evalFn(x) return err, gradparam end
             optfn(evalFn, param, optimState)
 
@@ -104,7 +106,7 @@ function step(tag)
         if opt.GPU ~= -1 then cutorch.synchronize() end
 
         -- If we're generating predictions, save output
-        if(opt.singleOutput) then
+        if(opt.useSPEN) then
             output = {output}
             label = {label}
         end
@@ -123,11 +125,14 @@ function step(tag)
         avgAcc = avgAcc + acc
         local gamma = 0.98
         currAvg = (i == 1) and err or (gamma*currAvg + (1 - gamma)*err)
-        if(i % 5 == 0) then print('loss-'..i..': '..currAvg.." "..err) end
+        if(i % 5 == 0) then print(tag..' loss-'..i..': '..currAvg.." "..err) end
         --xlua.progress(i,r.iters)
     end
+    --todo: remove
+    classifier:clearState()
+    torch.save('classifier.t7',classifier)
 
-    if(tag == "predict" or tag == "valid") then assert(numProcessed == r.iters) end
+    if(tag == "predict" or tag == "valid") then assert(numProcessed == r.iters,"numProcessed = "..numProcessed.." r.iters = "..r.iters) end
     avgLoss = avgLoss / blockCount
     avgAcc = avgAcc / blockCount
 

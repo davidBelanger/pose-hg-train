@@ -17,17 +17,18 @@ function Batcher:getData()
     local endfile = false
     if(self.dataIndex > self.loadedData[1]:size(1)) then 
         endfile = true
-        assert(self.numProcessedFromFile == self.loadedData[1]:size(1))
+        assert(self.numProcessedFromFile == self.loadedData[1]:size(1),"numProcessed = "..self.numProcessedFromFile.." size = "..self.loadedData[1]:size(1))
         self.loadedData = nil 
-        self.dataFileIndex = dataFileIndex + 1
-        if(dataFileIndex > #dataFiles) then dataFileIndex = 1 end
-        local dataFile = dataFiles[dataFileIndex]
+        self.dataFileIndex = self.dataFileIndex + 1
+        if(self.dataFileIndex > #self.dataFiles) then self.dataFileIndex = 1 end
+        local dataFile = self.dataFiles[self.dataFileIndex]
         self.loadedData = torch.load(dataFile)
         self.numProcessedFromFile = 0
         self.dataIndex = 1
     end
 
-    local len = (self.dataIndex + self.mb < self.loadedData[1]:size(1)) and self.mb or (self.loadedData[1]:size(1) - self.dataIndex+1)
+    lI = self.loadedData[1]:size(1)  - 1
+    local len = (self.dataIndex + self.mb -1 <= self.loadedData[1]:size(1)) and self.mb or (self.loadedData[1]:size(1) - self.dataIndex + 1)
     local iptr = self.loadedData[1]:narrow(1,self.dataIndex,len)
     local lptr = self.loadedData[2]:narrow(1,self.dataIndex,len)
     self.cudaInput = self.cudaInput or iptr:cuda()

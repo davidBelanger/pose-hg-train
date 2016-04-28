@@ -3,7 +3,7 @@ paths.dofile('models/' .. opt.netType .. '.lua')
 
 if(opt.createSPEN) then assert(opt.loadModel) end
 prebatch = function() end
-
+classifier = nil
 -- Continuing an experiment where it left off
 if opt.continue or opt.branch ~= 'none' then
     local prevModel = opt.load .. '/final_model.t7'
@@ -14,10 +14,10 @@ if opt.continue or opt.branch ~= 'none' then
 elseif opt.loadModel ~= 'none' then
     assert(paths.filep(opt.loadModel), 'File not found: ' .. opt.loadModel)
     print('==> Loading model from: ' .. opt.loadModel)
-    model = torch.load(opt.loadModel)
+    classifier = torch.load(opt.loadModel)
 
     if(opt.createSPEN) then
-        model, modules_to_update = spenInterface:createSPENModel(model,opt)
+        model, modules_to_update = spenInterface:createSPENModel(classifier,opt)
         prebatch = function() spenInterface:prebatch() end
     else
         modules_to_update = model
