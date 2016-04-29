@@ -23,8 +23,8 @@ batchers = {}
 
 paths.dofile('batcher.lua')
 
-batchers['train'] = opt.dataCache ~= "" and Batcher(opt.dataCache,opt.trainBatch)
-batchers['predict'] = opt.validDataCache ~= "" and Batcher(opt.validDataCache,opt.validBatch)
+batchers['train'] = opt.dataCache ~= "" and Batcher(opt.dataCache,opt.trainBatch,false)
+batchers['predict'] = opt.validDataCache ~= "" and Batcher(opt.validDataCache,opt.validBatch,true)
 
 
 -- Main processing step
@@ -61,8 +61,6 @@ function step(tag)
         if tag == 'predict' or (tag == 'valid' and trackBest) then idx = i end
 
         local input, label
-        ---todo: for debugging
-
 
         if(batcher) then
             input, label, endfile = batcher:getData()
@@ -125,12 +123,9 @@ function step(tag)
         avgAcc = avgAcc + acc
         local gamma = 0.98
         currAvg = (i == 1) and err or (gamma*currAvg + (1 - gamma)*err)
-        if(i % 5 == 0) then print(tag..' loss-'..i..': '..currAvg.." "..err) end
+        if(i % 5 == 0) then print(tag..' loss-'..i..': '..currAvg.." "..avgLoss/i) end
         --xlua.progress(i,r.iters)
     end
-    --todo: remove
-    classifier:clearState()
-    torch.save('classifier.t7',classifier)
 
     if(tag == "predict" or tag == "valid") then assert(numProcessed == r.iters,"numProcessed = "..numProcessed.." r.iters = "..r.iters) end
     avgLoss = avgLoss / blockCount

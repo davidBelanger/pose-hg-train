@@ -20,6 +20,7 @@ elseif opt.loadModel ~= 'none' then
         model, modules_to_update = spenInterface:createSPENModel(classifier,opt)
         prebatch = function() spenInterface:prebatch() end
     else
+        model = classifier
         modules_to_update = model
     end
 

@@ -1,6 +1,6 @@
 local Batcher, parent = torch.class('Batcher')
     
-function Batcher:__init(fileList,batchsize)
+function Batcher:__init(fileList,batchsize,onepass)
     self.dataFileIndex = 1
     self.dataIndex = 1
     self.mb = batchsize
@@ -25,9 +25,10 @@ function Batcher:getData()
         self.loadedData = torch.load(dataFile)
         self.numProcessedFromFile = 0
         self.dataIndex = 1
+        if(self.onepass) return nil, nil, endfile end
     end
 
-    lI = self.loadedData[1]:size(1)  - 1
+    local lI = self.loadedData[1]:size(1)  - 1
     local len = (self.dataIndex + self.mb -1 <= self.loadedData[1]:size(1)) and self.mb or (self.loadedData[1]:size(1) - self.dataIndex + 1)
     local iptr = self.loadedData[1]:narrow(1,self.dataIndex,len)
     local lptr = self.loadedData[2]:narrow(1,self.dataIndex,len)
