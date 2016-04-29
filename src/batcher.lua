@@ -25,10 +25,12 @@ function Batcher:getData()
         self.loadedData = torch.load(dataFile)
         self.numProcessedFromFile = 0
         self.dataIndex = 1
-        if(self.onepass) return nil, nil, endfile end
+        if(self.onepass)then 
+            print('batcher finished processing '..self.numProcessedFromFile.." examples")
+            return nil, nil, endfile 
+        end
     end
 
-    local lI = self.loadedData[1]:size(1)  - 1
     local len = (self.dataIndex + self.mb -1 <= self.loadedData[1]:size(1)) and self.mb or (self.loadedData[1]:size(1) - self.dataIndex + 1)
     local iptr = self.loadedData[1]:narrow(1,self.dataIndex,len)
     local lptr = self.loadedData[2]:narrow(1,self.dataIndex,len)

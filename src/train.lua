@@ -126,8 +126,10 @@ function step(tag)
         if(i % 5 == 0) then print(tag..' loss-'..i..': '..currAvg.." "..avgLoss/i) end
         --xlua.progress(i,r.iters)
     end
-
-    if(tag == "predict" or tag == "valid") then assert(numProcessed == r.iters,"numProcessed = "..numProcessed.." r.iters = "..r.iters) end
+    if(tag == "predict" or tag == "valid") then 
+        assert(numProcessed == r.iters,"numProcessed = "..numProcessed.." r.iters = "..r.iters) 
+        batchers['predict'] = opt.validDataCache ~= "" and Batcher(opt.validDataCache,opt.validBatch,true)
+    end
     avgLoss = avgLoss / blockCount
     avgAcc = avgAcc / blockCount
 
