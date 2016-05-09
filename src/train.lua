@@ -64,8 +64,6 @@ function step(tag)
         --xlua.progress(i, r.iters)
         local input, label = nextInput, nextLabel
 
-        local input, label
-
         blockCount = blockCount + 1
 
         -- Do a forward pass and calculate loss
