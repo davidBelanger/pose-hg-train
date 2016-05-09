@@ -19,18 +19,19 @@ if(opt.useSPEN) then
 end
 
 
-batchers = {}
+-- batchers = {}
 
-paths.dofile('batcher.lua')
+-- paths.dofile('batcher.lua')
 
-batchers['train'] = opt.dataCache ~= "" and Batcher(opt.dataCache,opt.trainBatch,false)
-batchers['predict'] = opt.validDataCache ~= "" and Batcher(opt.validDataCache,opt.validBatch,true)
-
+-- batchers['train'] = opt.dataCache ~= "" and Batcher(opt.dataCache,opt.trainBatch,false)
+-- batchers['predict'] = opt.validDataCache ~= "" and Batcher(opt.validDataCache,opt.validBatch,true)
+-- local batcher = batchers[tag]
 
 -- Main processing step
 function step(tag)
     local avgLoss, avgAcc = 0.0, 0.0
     local r = ref[tag]
+    local idx
 
     if tag == 'train' then
         print("==> Starting epoch: " .. epoch .. "/" .. (opt.nEpochs + opt.epochNumber - 1))
@@ -46,19 +47,15 @@ function step(tag)
     local currAvg
 
 
-    local batcher = batchers[tag]
 
-    --xlua.progress(0, r.iters)
-    local numProcessed = 0
-    local blockCount = 0
+    if tag == 'predict' or (tag == 'valid' and trackBest) then idx = 1 end
+    local nextInput, nextLabel = loadData(set, nextIdx, r.batchsize)
+
     for i=1,r.iters do
         collectgarbage()
 
-        local output,err,idx
-       -- xlua.progress(i, r.iters)
-
-        -- Load in data
-        if tag == 'predict' or (tag == 'valid' and trackBest) then idx = i end
+        xlua.progress(i, r.iters)
+        local input, label = nextInput, nextLabel
 
         local input, label
 
@@ -69,6 +66,7 @@ function step(tag)
             input, label = loadData(set, idx, r.batchsize)
         end
         blockCount = blockCount + 1
+
         -- Do a forward pass and calculate loss
         prebatch()
         output = model:forward(input)
@@ -80,6 +78,7 @@ function step(tag)
         end
 
         err = criterion:forward(output, label)
+
 
         -- Training: Do backpropagation and optimization
         if tag == 'train' then
@@ -100,6 +99,11 @@ function step(tag)
 
         end
 
+        -- Load up next sample, runs simultaneously with GPU
+        -- If idx is nil, loadData will choose a sample at random
+        if tag == 'predict' or (tag == 'valid' and trackBest) then idx = i+1 end
+        if i <= r.iters then nextInput, nextLabel = loadData(set, idx, r.batchsize) end
+
         -- Synchronize with GPU
         if opt.GPU ~= -1 then cutorch.synchronize() end
 
@@ -110,9 +114,13 @@ function step(tag)
         end
 
         if tag == 'predict' or (tag == 'valid' and trackBest) then
-            local oo = type(outputDim[1]) == "table" and output[#output] or output
-            predHMs:narrow(1,numProcessed+1,oo:size(1)):copy(oo)
-            if postprocess then preds:sub(numProcessed+1,numProcessed + oo:size(1)):copy(postprocess(set,idx,{oo})) end
+            if type(outputDim[1]) == "table" then
+                -- If we're getting a table of heatmaps, save the last one
+                predHMs:sub(i,i+r.batchsize-1):copy(output[#output])
+            else
+                predHMs:sub(i,i+r.batchsize-1):copy(output)
+            end
+            if postprocess then preds:sub(i,i+r.batchsize-1):copy(postprocess(set,i,output)) end
         end
 
         -- Calculate accuracy
