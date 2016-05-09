@@ -22,6 +22,7 @@ function Batcher:getData()
         self.dataFileIndex = self.dataFileIndex + 1
         if(self.dataFileIndex > #self.dataFiles) then self.dataFileIndex = 1 end
         local dataFile = self.dataFiles[self.dataFileIndex]
+        print('loading from '..dataFile)
         self.loadedData = torch.load(dataFile)
         self.numProcessedFromFile = 0
         self.dataIndex = 1

@@ -13,10 +13,6 @@ if type(outputDim[1]) == "table" then predHMs = torch.Tensor(ref.valid.nsamples,
 else predHMs = torch.Tensor(ref.valid.nsamples, unpack(outputDim)) end
 
 
-if(opt.singleOutput) then
-    criterion = nn.MSECriterion()
-    criterion:cuda()
-end
 
 -- Main processing step
 function step(tag)
@@ -25,12 +21,10 @@ function step(tag)
 
     if tag == 'train' then
         print("==> Starting epoch: " .. epoch .. "/" .. (opt.nEpochs + opt.epochNumber - 1))
-        model:training()
         set = 'train'
         isTesting = false -- Global flag
     else
         if tag == 'predict' then print("==> Generating predictions...") end
-        model:evaluate()
         set = 'valid'
         isTesting = true
     end

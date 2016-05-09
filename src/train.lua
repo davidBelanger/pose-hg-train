@@ -19,13 +19,13 @@ if(opt.useSPEN) then
 end
 
 
--- batchers = {}
+batchers = {}
 
--- paths.dofile('batcher.lua')
+paths.dofile('batcher.lua')
 
--- batchers['train'] = opt.dataCache ~= "" and Batcher(opt.dataCache,opt.trainBatch,false)
--- batchers['predict'] = opt.validDataCache ~= "" and Batcher(opt.validDataCache,opt.validBatch,true)
--- local batcher = batchers[tag]
+batchers['train'] = opt.dataCache ~= "" and Batcher(opt.dataCache,opt.trainBatch,false)
+batchers['predict'] = opt.validDataCache ~= "" and Batcher(opt.validDataCache,opt.validBatch,true)
+local batcher = batchers[tag]
 
 -- Main processing step
 function step(tag)
@@ -49,22 +49,23 @@ function step(tag)
 
 
     if tag == 'predict' or (tag == 'valid' and trackBest) then idx = 1 end
-    local nextInput, nextLabel = loadData(set, nextIdx, r.batchsize)
+    local nextInput, nextLabel
+    if(not batcher) then
+        nextInput, nextLabel = loadData(set, nextIdx, r.batchsize)
+    else
+        nextInput, nextLabel = batcher:getData()
+    end
 
+    local blockCount = 0
+    local numProcessed = 0
     for i=1,r.iters do
         collectgarbage()
 
-        xlua.progress(i, r.iters)
+        --xlua.progress(i, r.iters)
         local input, label = nextInput, nextLabel
 
         local input, label
 
-        if(batcher) then
-            input, label, endfile = batcher:getData()
-            if(endfile and (tag == "predict" or tag == "valid")) then break end
-        else
-            input, label = loadData(set, idx, r.batchsize)
-        end
         blockCount = blockCount + 1
 
         -- Do a forward pass and calculate loss
@@ -102,7 +103,14 @@ function step(tag)
         -- Load up next sample, runs simultaneously with GPU
         -- If idx is nil, loadData will choose a sample at random
         if tag == 'predict' or (tag == 'valid' and trackBest) then idx = i+1 end
-        if i <= r.iters then nextInput, nextLabel = loadData(set, idx, r.batchsize) end
+        if i <= r.iters then 
+            if(not batcher) then
+                error('are you sure?')
+                nextInput, nextLabel = loadData(set, nextIdx, r.batchsize)
+            else
+                nextInput, nextLabel = batcher:getData()
+            end
+        end
 
         -- Synchronize with GPU
         if opt.GPU ~= -1 then cutorch.synchronize() end
