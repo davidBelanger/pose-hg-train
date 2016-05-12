@@ -36,13 +36,16 @@ function step(tag)
         local inputs,labels
         local j = 0
         local numMinibatches = 1
+        local numProcessed = 0
         while(j < numPerFile) do
             xlua.progress(j, numPerFile)
 
             -- Load in data
             --if tag == 'predict' or (tag == 'valid' and trackBest) then idx = i end
+
             local input, label = loadData(set, numMinibatches, r.batchsize)
             local si = input:size()
+            numProcessed = numProcessed + si[1]
             inputs = inputs or torch.Tensor(numPerFile,si[2],si[3],si[4])
             inputs:narrow(1,j+1,si[1]):copy(input)
 
@@ -53,6 +56,7 @@ function step(tag)
             numMinibatches = numMinibatches + 1
         end
         local ofile = opt.save.."/"..tag.."-data-"..i..".t7"
+        assert(numProcessed == numPerFile)
         print(ofile)
         torch.save(ofile,{inputs,labels})
     end

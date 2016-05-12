@@ -13,12 +13,6 @@ if type(outputDim[1]) == "table" then predHMs = torch.Tensor(ref.valid.nsamples,
 else predHMs = torch.Tensor(ref.valid.nsamples, unpack(outputDim)) end
 
 
-if(opt.useSPEN) then
-    criterion = nn.MSECriterion()
-    criterion:cuda()
-end
-
-
 batchers = {}
 
 paths.dofile('batcher.lua')
@@ -36,12 +30,10 @@ function step(tag)
 
     if tag == 'train' then
         print("==> Starting epoch: " .. epoch .. "/" .. (opt.nEpochs + opt.epochNumber - 1))
-        model:training()
         set = 'train'
         isTesting = false -- Global flag
     else
         if tag == 'predict' then print("==> Generating predictions...") end
-        model:evaluate()
         set = 'valid'
         isTesting = true
     end
@@ -57,93 +49,54 @@ function step(tag)
 
     local blockCount = 0
     local numProcessed = 0
-    for i=1,r.iters do
+
+
+    local numBlocks = 1
+    local numPerFile = 2958
+    local numProcessed = 0
+    local currAvg
+    for i=1,numBlocks do
         collectgarbage()
-        local input = nextInput
-        local label = nextLabel
+        local j = 0
+        while(j < numPerFile) do
+            xlua.progress(j,numPerFile)
+            local input, label = nextInput, nextLabel
+            blockCount = blockCount + 1
 
-        blockCount = blockCount + 1
+            local si = input:size()
+            numProcessed = numProcessed + si[1]
+            inputs = inputs or torch.Tensor(numPerFile,si[2],si[3],si[4])
+            print((j+1).." "..si[1])
+            inputs:narrow(1,j+1,si[1]):copy(input)
 
-        -- Do a forward pass and calculate loss
-        prebatch()
-        
-        output = model:forward(input)
-
-        if(opt.useSPEN and (type(label) == "table")) then
-            label = label[#label]
-        end
-        if(opt.useSPEN and (type(output) == "table")) then
-            output = output[#output]
-        end
-
-        err = criterion:forward(output, label)
-
-
-        -- Training: Do backpropagation and optimization
-        if tag == 'train' then
-            model:zeroGradParameters()
-            local dfdo = criterion:backward(output, label)
-            model:backward(input, dfdo)
-            local function evalFn(x) return err, gradparam end
-            optfn(evalFn, param, optimState)
-
-        -- Validation: Get flipped output
-        else
-            output = applyFn(function (x) return x:clone() end, output)
-            local flip_ = customFlip or flip
-            local shuffleLR_ = customShuffleLR or shuffleLR
-            local flippedOut = model:forward(flip_(input))
-            flippedOut = applyFn(function (x) return flip_(shuffleLR_(x)) end, flippedOut)
-            output = applyFn(function (x,y) return x:add(y):div(2) end, output, flippedOut)
-
-        end
-
-
-
-        -- Synchronize with GPU
-        if opt.GPU ~= -1 then cutorch.synchronize() end
-
-        -- If we're generating predictions, save output
-        if(opt.useSPEN) then
-            output = {output}
-            label = {label}
-        end
-
-        if tag == 'predict' or (tag == 'valid' and trackBest) then
-            if type(outputDim[1]) == "table" then
-                -- If we're getting a table of heatmaps, save the last one
-                local ss = output[#output]:size(1)
-                predHMs:sub(i,i+ss-1):copy(output[#output])
-            else
-                local ss = output:size(1)
-                predHMs:sub(i,i+ss-1):copy(output)
-            end
-            if postprocess then preds:sub(i,i+r.batchsize-1):copy(postprocess(set,i,output)) end
-        end
-
-        -- Calculate accuracy
-        numProcessed = numProcessed + input:size(1)
-
-        local acc = accuracy(output, label)
-        avgLoss = avgLoss + err
-        avgAcc = avgAcc + acc
-        local gamma = 0.98
-        currAvg = (i == 1) and err or (gamma*currAvg + (1 - gamma)*err)
-        if(i % 5 == 0) then print(tag..' loss-'..i..': '..currAvg.." "..avgLoss/i.." "..avgAcc/i) end
-        --xlua.progress(i,r.iters)
-
-        -- Load up next sample, runs simultaneously with GPU
-        -- If idx is nil, loadData will choose a sample at random
-        if tag == 'predict' or (tag == 'valid' and trackBest) then idx = i+1 end
-        if i <= r.iters then 
-            if(not batcher) then
-                nextInput, nextLabel = loadData(set, idx, r.batchsize)
-            else
-                nextInput, nextLabel = batcher:getData()
+            local li = label[#label]:size()
+            labels = labels or torch.Tensor(numPerFile,li[2],li[3],li[4])
+            labels:narrow(1,j+1,si[1]):copy(label[#label])
+            j = j+si[1]
+            -- Load up next sample, runs simultaneously with GPU
+            -- If idx is nil, loadData will choose a sample at random
+            if tag == 'predict' or (tag == 'valid' and trackBest) then idx = blockCount+1 end
+            if j < numPerFile then 
+                if(not batcher) then
+                    local numToTake = (j + r.batchsize <= numPerFile) r.batchsize or (numPerFile - j)
+                    nextInput, nextLabel = loadData(set, idx, numToTake)
+                else
+                    nextInput, nextLabel = batcher:getData()
+                end
             end
         end
+        assert(numProcessed == numPerFile,"num processed = "..numProcessed.." numPerFile = "..numPerFile)
+        local ofile = opt.save.."/"..tag.."-data-"..i..".t7"
+        print(ofile)
+        torch.save(ofile,{inputs,labels})
 
     end
+
+            local ofile = opt.save.."/"..tag.."-data-"..i..".t7"
+        print(ofile)
+        torch.save(ofile,{inputs,labels})
+
+
     if(tag == "predict" or tag == "valid") then 
         assert(numProcessed == r.iters,"numProcessed = "..numProcessed.." r.iters = "..r.iters) 
         batchers['predict'] = opt.validDataCache ~= "" and Batcher(opt.validDataCache,opt.validBatch,true)
