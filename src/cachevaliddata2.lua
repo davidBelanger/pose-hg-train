@@ -78,7 +78,7 @@ function step(tag)
             if tag == 'predict' or (tag == 'valid' and trackBest) then idx = blockCount+1 end
             if j < numPerFile then 
                 if(not batcher) then
-                    local numToTake = (j + r.batchsize <= numPerFile) r.batchsize or (numPerFile - j)
+                    local numToTake = (j + r.batchsize <= numPerFile) and r.batchsize or (numPerFile - j)
                     nextInput, nextLabel = loadData(set, idx, numToTake)
                 else
                     nextInput, nextLabel = batcher:getData()

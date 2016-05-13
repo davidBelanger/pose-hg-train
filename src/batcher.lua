@@ -7,7 +7,7 @@ function Batcher:__init(fileList,batchsize,onepass)
     print("reading pre-cached data from: "..fileList)
     self.dataFiles = self:readList(fileList) 
     self.numProcessedFromFile = 0
-
+    self.onepass = onepass
 end
 
 
@@ -24,10 +24,10 @@ function Batcher:getData()
         local dataFile = self.dataFiles[self.dataFileIndex]
         print('loading from '..dataFile)
         self.loadedData = torch.load(dataFile)
+        if(self.onepass) then  print('batcher finished processing '..self.numProcessedFromFile.." examples") end
         self.numProcessedFromFile = 0
         self.dataIndex = 1
         if(self.onepass)then 
-            print('batcher finished processing '..self.numProcessedFromFile.." examples")
             return nil, nil, endfile 
         end
     end

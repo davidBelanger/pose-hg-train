@@ -57,6 +57,7 @@ function step(tag)
 
     local blockCount = 0
     local numProcessed = 0
+    print(tag.." "..r.iters)
     for i=1,r.iters do
         collectgarbage()
         local input = nextInput
@@ -118,7 +119,8 @@ function step(tag)
                 local ss = output:size(1)
                 predHMs:sub(i,i+ss-1):copy(output)
             end
-            if postprocess then preds:sub(i,i+r.batchsize-1):copy(postprocess(set,i,output)) end
+            local pp = postprocess(set,i,output)
+            if postprocess then preds:sub(i,i+pp:size(1)-1):copy(pp) end
         end
 
         -- Calculate accuracy
@@ -140,6 +142,7 @@ function step(tag)
                 nextInput, nextLabel = loadData(set, idx, r.batchsize)
             else
                 nextInput, nextLabel = batcher:getData()
+                if(not nextInput) then break end
             end
         end
 
