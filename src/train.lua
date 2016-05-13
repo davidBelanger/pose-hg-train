@@ -14,7 +14,11 @@ else predHMs = torch.Tensor(ref.valid.nsamples, unpack(outputDim)) end
 
 
 if(opt.useSPEN) then
-    criterion = nn.MSECriterion()
+    if(opt.positiveWeight ~= 1.0) then
+        criterion = nn.WeightedMSECriterion(opt.positiveWeight,function(input,target) return input:gt(0) end) --the second argument is a function that selects indices where we should weight the loss
+    else
+        criterion = nn.MSECriterion()
+    end
     criterion:cuda()
 end
 
@@ -179,7 +183,7 @@ function step(tag)
         local modelPath = paths.concat(opt.save, 'model_' .. epoch .. '.t7')
         print('saving to '..modelPath)
         torch.save(modelPath, model)
-        torch.save(paths.concat(opt.save, 'optimState.t7'), optimState)
+        torch.save(paths.concat(opt.save, 'optimState_'..epoch..'.t7'), optimState)
     elseif tag == 'valid' and trackBest and avgAcc > opt.bestAcc then
         -- A new record validation accuracy has been hit, save the model and predictions
         predFile = hdf5.open(opt.save .. '/best_preds.h5', 'w')
@@ -188,11 +192,11 @@ function step(tag)
         predFile:close()
         model:clearState()
         torch.save(paths.concat(opt.save, 'best_model.t7'), model)
-        torch.save(paths.concat(opt.save, 'optimState.t7'), optimState)
+        torch.save(paths.concat(opt.save, 'best_optimState_'..epoch..'.t7'), optimState)
         opt.bestAcc = avgAcc
     elseif tag == 'predict' then
         -- Save final predictions
-        predFile = hdf5.open(opt.save .. '/preds.h5', 'w')
+        predFile = hdf5.open(opt.save .. '/preds_'..epoch..'.h5', 'w')
         predFile:write('heatmaps', predHMs)
         if postprocess then predFile:write('preds', preds) end
         predFile:close()
