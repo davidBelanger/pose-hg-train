@@ -15,7 +15,8 @@ else predHMs = torch.Tensor(ref.valid.nsamples, unpack(outputDim)) end
 
 if(opt.useSPEN) then
     if(opt.positiveWeight ~= 1.0) then
-        criterion = nn.WeightedMSECriterion(opt.positiveWeight,function(input,target) return input:gt(0) end) --the second argument is a function that selects indices where we should weight the loss
+        print('using a postive weight of '..opt.positiveWeight)
+        criterion = nn.SelectivelyWeightedMSECriterion(opt.positiveWeight,function(input,target) return input:gt(0.25) end) --the second argument is a function that selects indices where we should weight the loss
     else
         criterion = nn.MSECriterion()
     end
