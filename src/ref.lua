@@ -25,6 +25,8 @@ projectDir = paths.concat(os.getenv('HOME'),'pose-hg-train')
 -- Process command line options
 -------------------------------------------------------------------------------
 
+if not opt then
+
 local opts = paths.dofile('opts.lua')
 opt = opts.parse(arg)
 
@@ -98,6 +100,18 @@ end
 
 -- Save options to experiment directory
 torch.save(opt.save .. '/options.t7', opt)
+
+end
+
+if opt.GPU == -1 then
+    nnlib = nn
+else
+    require 'cutorch'
+    require 'cunn'
+    require 'cudnn'
+    nnlib = cudnn
+    cutorch.setDevice(opt.GPU)
+end
 
 -------------------------------------------------------------------------------
 -- Load in annotations

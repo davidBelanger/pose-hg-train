@@ -36,8 +36,9 @@ function step(tag)
     local batcher = batchers[tag]
 
     local avgLoss, avgAcc = 0.0, 0.0
+    local output, err, idx
     local r = ref[tag]
-    local idx
+    local function evalFn(x) return criterion.output, gradparam end
 
     if tag == 'train' then
         print("==> Starting epoch: " .. epoch .. "/" .. (opt.nEpochs + opt.epochNumber - 1))
@@ -52,23 +53,37 @@ function step(tag)
     end
     local currAvg
 
-    if tag == 'predict' or (tag == 'valid' and trackBest) then idx = 1 end
-    local nextInput, nextLabel
-    if(not batcher) then
-        nextInput, nextLabel = loadData(set, idx, r.batchsize)
-    else
-        nextInput, nextLabel = batcher:getData()
-    end
+--     if tag == 'predict' or (tag == 'valid' and trackBest) then idx = 1 end
+--     local nextInput, nextLabel
+--     if(not batcher) then
+--         nextInput, nextLabel = loadData(set, idx, r.batchsize)
+--     else
+--         nextInput, nextLabel = batcher:getData()
+--     end
+
+--     local blockCount = 0
+--     local numProcessed = 0
+--     print(tag.." "..r.iters)
+--     for i=1,r.iters do
+--         collectgarbage()
+--         local input = nextInput
+--         local label = nextLabel
+
+--         blockCount = blockCount + 1
 
     local blockCount = 0
     local numProcessed = 0
-    print(tag.." "..r.iters)
-    for i=1,r.iters do
-        collectgarbage()
-        local input = nextInput
-        local label = nextLabel
+    for i,sample in loader[set]:run() do
 
+        xlua.progress(i, r.iters)
+        local input, label = unpack(sample)
         blockCount = blockCount + 1
+        numProcessed = numProcessed + input:size(1)
+        if opt.GPU ~= -1 then
+            -- Convert to CUDA
+            input = applyFn(function (x) return x:cuda() end, input)
+            label = applyFn(function (x) return x:cuda() end, label)
+        end
 
         -- Do a forward pass and calculate loss
         prebatch()
@@ -88,9 +103,7 @@ function step(tag)
         -- Training: Do backpropagation and optimization
         if tag == 'train' then
             model:zeroGradParameters()
-            local dfdo = criterion:backward(output, label)
-            model:backward(input, dfdo)
-            local function evalFn(x) return err, gradparam end
+            model:backward(input, criterion:backward(output, label))
             optfn(evalFn, param, optimState)
 
         -- Validation: Get flipped output
@@ -103,8 +116,6 @@ function step(tag)
             output = applyFn(function (x,y) return x:add(y):div(2) end, output, flippedOut)
 
         end
-
-
 
         -- Synchronize with GPU
         if opt.GPU ~= -1 then cutorch.synchronize() end

@@ -47,6 +47,9 @@ if opt.GPU ~= -1 then
     print('==> Converting model to CUDA')
     model:cuda()
     criterion:cuda()
+    
+    cudnn.fastest = true
+    cudnn.benchmark = true
 end
 
 
